@@ -18,8 +18,8 @@
         <input type="range" id="gameSpeed" min="0.5" max="2" step="0.1" value="1">
         <span id="gameSpeedValue">1</span> x<br><br>
 
-        <label for="difficulty">AI Difficulty:</label>
-        <select id="difficulty">
+        <label for="aiDifficulty">AI Difficulty:</label>
+        <select id="aiDifficulty" onchange="setAIDifficulty(this.value)">
             <option value="easy">Easy</option>
             <option value="normal" selected>Normal</option>
             <option value="hard">Hard</option>

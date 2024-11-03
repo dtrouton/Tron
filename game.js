@@ -10,12 +10,40 @@ const totalRounds = 5;
 let playerScore = 0;
 let aiScore = 0;
 
-const arenaSize = 50; // Half the size of the arena
+const arenaSize = 100; // Half the size of the arena
 
 // Touch controls
 let touchStartX = null;
 
 const gameContainer = document.getElementById('gameContainer');
+
+// Add this near the top with other game variables
+const aiConfig = {
+    easy: {
+        turnSpeed: 0.02,
+        wallAvoidanceDistance: 20,
+        wallAvoidanceWeight: 0.9,
+        playerChaseWeight: 0.1
+    },
+    normal: {
+        turnSpeed: 0.1,
+        wallAvoidanceDistance: 25,
+        wallAvoidanceWeight: 0.8,
+        playerChaseWeight: 0.2
+    },
+    hard: {
+        turnSpeed: 0.2,
+        wallAvoidanceDistance: 30,
+        wallAvoidanceWeight: 0.7,
+        playerChaseWeight: 0.3
+    }
+};
+
+
+function setAIDifficulty(difficulty) {
+    aiDifficulty = difficulty;
+    console.log(`AI Difficulty set to: ${difficulty}`);
+}
 
 // Initialize the Three.js scene
 function initScene() {
@@ -357,6 +385,89 @@ function aiUpdate() {
     }
 }
 
+function updateAI() {
+    if (!ai.alive) return;
+    
+    const config = aiConfig[aiDifficulty] || aiConfig.normal;
+    const wallAvoidanceVector = getWallAvoidanceVector();
+    const playerChaseVector = getPlayerChaseVector();
+    
+    // Dynamically adjust weights based on wall proximity
+    let wallWeight = config.wallAvoidanceWeight;
+    let playerWeight = config.playerChaseWeight;
+    
+    // If very close to walls, prioritize avoidance
+    if (wallAvoidanceVector.length() > 0.8) {
+        wallWeight = 0.9;
+        playerWeight = 0.1;
+    }
+
+    const targetDirection = new THREE.Vector3()
+        .addVectors(
+            wallAvoidanceVector.multiplyScalar(wallWeight),
+            playerChaseVector.multiplyScalar(playerWeight)
+        )
+        .normalize();
+
+    // Calculate angle to target direction
+    const currentDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(ai.mesh.quaternion);
+    const targetAngle = Math.atan2(targetDirection.x, targetDirection.z);
+    const currentAngle = Math.atan2(currentDirection.x, currentDirection.z);
+
+    let angleChange = targetAngle - currentAngle;
+    angleChange = Math.atan2(Math.sin(angleChange), Math.cos(angleChange));
+
+    // Apply turn based on difficulty
+    const turnQuaternion = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        angleChange * config.turnSpeed
+    );
+    ai.mesh.quaternion.multiplyQuaternions(turnQuaternion, ai.mesh.quaternion);
+
+    // Move AI forward
+    const moveVector = currentDirection.multiplyScalar(ai.speed);
+    ai.mesh.position.add(moveVector);
+}
+
+function getWallAvoidanceVector() {
+    const config = aiConfig[aiDifficulty] || aiConfig.normal;
+    const avoidanceVector = new THREE.Vector3();
+    
+    // Check distances to walls
+    const distanceToRight = arenaSize - ai.mesh.position.x;
+    const distanceToLeft = arenaSize + ai.mesh.position.x;
+    const distanceToFront = arenaSize - ai.mesh.position.z;
+    const distanceToBack = arenaSize + ai.mesh.position.z;
+    
+    // Add repulsion forces from nearby walls
+    if (distanceToRight < config.wallAvoidanceDistance) {
+        avoidanceVector.x -= 1.0 * (config.wallAvoidanceDistance - distanceToRight);
+    }
+    if (distanceToLeft < config.wallAvoidanceDistance) {
+        avoidanceVector.x += 1.0 * (config.wallAvoidanceDistance - distanceToLeft);
+    }
+    if (distanceToFront < config.wallAvoidanceDistance) {
+        avoidanceVector.z -= 1.0 * (config.wallAvoidanceDistance - distanceToFront);
+    }
+    if (distanceToBack < config.wallAvoidanceDistance) {
+        avoidanceVector.z += 1.0 * (config.wallAvoidanceDistance - distanceToBack);
+    }
+    
+    if (avoidanceVector.length() > 0) {
+        avoidanceVector.normalize();
+    }
+    
+    return avoidanceVector.normalize();
+}
+
+function getPlayerChaseVector() {
+    const toPlayer = new THREE.Vector3()
+        .subVectors(player.position, ai.position)
+        .normalize();
+    
+    return toPlayer;
+}
+
 // Collision detection
 function checkCollisions() {
     // Check player collisions
@@ -375,17 +486,14 @@ function checkCollisions() {
     }
 }
 
-// Check collision with walls (arena boundaries)
+const aiRadius = 1; // Assuming a radius of 1 unit
 function checkWallCollision(position) {
-    if (
-        position.x > arenaSize ||
-        position.x < -arenaSize ||
-        position.z > arenaSize ||
-        position.z < -arenaSize
-    ) {
-        return true;
-    }
-    return false;
+    return (
+        position.x > arenaSize - aiRadius ||
+        position.x < -arenaSize + aiRadius ||
+        position.z > arenaSize - aiRadius ||
+        position.z < -arenaSize + aiRadius
+    );
 }
 
 // Check collision with trails
