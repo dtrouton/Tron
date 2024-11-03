@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tron Light Cycles - First Person</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="mainMenu">
+        <h1>Tron Light Cycles</h1>
+        <button id="startGameBtn">Start Game</button>
+        <button id="settingsBtn">Settings</button>
+    </div>
+
+    <div id="settingsMenu" class="hidden">
+        <h2>Settings</h2>
+        <label for="gameSpeed">Game Speed:</label>
+        <input type="range" id="gameSpeed" min="0.5" max="2" step="0.1" value="1">
+        <span id="gameSpeedValue">1</span> x<br><br>
+
+        <label for="difficulty">AI Difficulty:</label>
+        <select id="difficulty">
+            <option value="easy">Easy</option>
+            <option value="normal" selected>Normal</option>
+            <option value="hard">Hard</option>
+        </select><br><br>
+
+        <button id="backBtn">Back</button>
+    </div>
+
+    <!-- The game canvas will be rendered here -->
+    <div id="gameContainer" class="hidden"></div>
+
+    <!-- Include Three.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Include the game script -->
+    <script src="game.js"></script>
+</body>
+</html>
